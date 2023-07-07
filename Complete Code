@@ -1,142 +1,152 @@
-<!-- Include Required Prerequisites -->
+<!-- 
+   Code: Automation dashboard for developers in SFMC
+   Description: This code when used on a cloud page will show an automation list in the 
+                left side and instances of selected automation on the right with a pie chart of failed and successful runs.
+   Developer name: Sravan Alaparthi
+   Date:
+   Version:
+   Last modified:
+   Last modified reason:
+   
+   -->
+<!-- For styling the tables we will be using W3.css and Chart.js for charting -->
 <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
-
-<!-- AMPScript to fetch sected automation ID from URL parameter -->
+<!--The above resources can be placed within SFMC to reduce impacts of external factors -->
+<!-- AMPScript to fetch selected automation ID from URL parameter -->
 %%[ /*Declare Variables*/ var @nsuccess,@nerrors,@ai /*Get Subscriber in content
 from url*/ Set @ai = RequestParameter("ai") ]%%
-
 <!-- Div to set table styles -->
 <div class="w3-cell-row w3-table-all w3-hoverable">
-    <!-- Code to divide page into sections -->
-    <div class="w3-container w3-quarter">
-        <!-- First section on the left to display list of automations with 25% width -->
-        <div class="w3-sidebar w3-light-grey w3-bar-block" style="width: 25%">
-            <script runat="server">
-                Platform.Load("Core", "1.1.1");
-                var prox = new Script.Util.WSProxy();
-                var cols = ["Name", "CustomerKey"];
-                var filter = {
-                  Property: "Status",
-                  SimpleOperator: "IN",
-                  Value: [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]
-                };
-                var res = prox.retrieve("Automation", cols, filter);
-                if (res.Results.length > 0) {
-                  var statusObj = {
-                    "-1": "Error",
-                    "0": "BuildingError",
-                    "1": "Building",
-                    "2": "Ready",
-                    "3": "Running",
-                    "4": "Paused",
-                    "5": "Stopped",
-                    "6": "Scheduled",
-                    "7": "Awaiting Trigger",
-                    "8": "InactiveTrigger"
-                  }
-                  Write(' < table id = "tableId" > < tr > < th colspan = "2" > Select the automation < /th> < /tr>')
-                      for (var i = 0; i < res.Results.length; i++) {
-                        var autoName = res.Results[i].Name;
-                        var ID = res.Results[i].CustomerKey;
-                        var autoStatus = statusObj[autoStatusNum];
-                        Write(' < tr > < td > ' + autoName + ' < /td> < td style = "display:none;" > ' +ID+' < /td> < /tr>')
-                        }
-                        Write(' < /table>')
-                        }
-            </script>
-        </div>
-    </div>
-
-    <!-- Second section to right which displays automation instances -->
-    <div class="w3-container w3-threequarter">
-        <canvas id="pie-chart" width="150;" height="50"></canvas>
-        <script runat="server">
+   <!-- Code to divide page into sections -->
+   <div class="w3-container w3-quarter">
+      <!-- First section on the left to display list of automations with 25% width -->
+      <div class="w3-sidebar w3-light-grey w3-bar-block" style="width: 25%">
+         <script runat="server">
             Platform.Load("Core", "1.1.1");
             var prox = new Script.Util.WSProxy();
-            var automationkey = Variable.GetValue("@ai");
-            var cols = ["Name", "Status", "CompletedTime", "StatusMessage", "StartTime"];
-            if (automationkey !== null && automationkey !== "") {
-              var filter = {
-                Property: "CustomerKey",
-                SimpleOperator: "EQUALS",
-                Value: automationkey
+            var cols = ["Name", "CustomerKey"];
+            var filter = {
+              Property: "Status",
+              SimpleOperator: "IN",
+              Value: [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]
+            };
+            var res = prox.retrieve("Automation", cols, filter);
+            if (res.Results.length > 0) {
+              var statusObj = {
+                "-1": "Error",
+                "0": "BuildingError",
+                "1": "Building",
+                "2": "Ready",
+                "3": "Running",
+                "4": "Paused",
+                "5": "Stopped",
+                "6": "Scheduled",
+                "7": "Awaiting Trigger",
+                "8": "InactiveTrigger"
               }
-              var res = prox.retrieve("AutomationInstance", cols, filter);
-              var nerrors = 0;
-              var nsuccess = 0;
-              if (res.Results.length > 1) {
-                Write(' < table > < tr > < th colspan = "2" > < /th> < /tr>')
-                    for (var i = 0; i < res.Results.length; i++) {
-                      var autoName = res.Results[i].Name;
-                      var StartTime = res.Results[i].StartTime;
-                      var CompletedTime = res.Results[i].CompletedTime;
-                      var Status = res.Results[i].Status;
-                      var StatusMessage = res.Results[i].StatusMessage;
-                      if (StatusMessage == 'Error') {
-                        nerrors = nerrors + 1;
-                      }
-                      if (StatusMessage == 'Complete') {
-                        nsuccess = nsuccess + 1;
-                      }
-                      Write(' < tr > < td > ' + autoName + ' < /td> < td > ' +StartTime+ ' < /td> < td > ' +CompletedTime+ ' < /td> < td > '+StatusMessage+' < /td> < /tr>');
-                      }
-                      Write(' < /table>')
-                        Variable.SetValue("@nsuccess", nsuccess); Variable.SetValue("@nerrors", nerrors);
-                      }
-                      else {
-                        Write(' < h1 align = "center" > No Instances found
-                          for this Automation < /h1>');
-                        }
-                      } else {
-                        Write(' < h1 align = "center" > Select an automation from left < /h1>');
-                        }
-        </script>
-    </div>
-    <!-- SSJS writes number of automation success and failures to DOM(not displayed to user) so Client side JS can read the same for Charting -->
-    <div style="display: none">
-        <p id="nsuccess">%%=v(@nsuccess)=%%</p>
-        <p id="nerrors">%%=v(@nerrors)=%%</p>
-    </div>
+              Write(' < table id = "tableId" > < tr > < th colspan = "2" > Select the automation < /th> < /tr>')
+                  for (var i = 0; i < res.Results.length; i++) {
+                    var autoName = res.Results[i].Name;
+                    var ID = res.Results[i].CustomerKey;
+                    var autoStatus = statusObj[autoStatusNum];
+                    Write(' < tr > < td > ' + autoName + ' < /td> < td style = "display:none;" > ' +ID+' < /td> < /tr>')
+                    }
+                    Write(' < /table>')
+                    }
+         </script>
+      </div>
+   </div>
+   <!-- Second section to right which displays automation instances -->
+   <div class="w3-container w3-threequarter">
+      <!-- Charting canavas -->
+      <canvas id="pie-chart" width="150;" height="50"></canvas>
+      <script runat="server">
+         Platform.Load("Core", "1.1.1");
+         var prox = new Script.Util.WSProxy();
+         var automationkey = Variable.GetValue("@ai");
+         var cols = ["Name", "Status", "CompletedTime", "StatusMessage", "StartTime"];
+         if (automationkey !== null && automationkey !== "") {
+           var filter = {
+             Property: "CustomerKey",
+             SimpleOperator: "EQUALS",
+             Value: automationkey
+           }
+           var res = prox.retrieve("AutomationInstance", cols, filter);
+           var nerrors = 0;
+           var nsuccess = 0;
+           if (res.Results.length > 1) {
+             Write(' < table > < tr > < th colspan = "2" > < /th> < /tr>')
+                 for (var i = 0; i < res.Results.length; i++) {
+                   var autoName = res.Results[i].Name;
+                   var StartTime = res.Results[i].StartTime;
+                   var CompletedTime = res.Results[i].CompletedTime;
+                   var Status = res.Results[i].Status;
+                   var StatusMessage = res.Results[i].StatusMessage;
+                   if (StatusMessage == 'Error') {
+                     nerrors = nerrors + 1;
+                   }
+                   if (StatusMessage == 'Complete') {
+                     nsuccess = nsuccess + 1;
+                   }
+                   Write(' < tr > < td > ' + autoName + ' < /td> < td > ' +StartTime+ ' < /td> < td > ' +CompletedTime+ ' < /td> < td > '+StatusMessage+' < /td> < /tr>');
+                   }
+                   Write(' < /table>')
+                     Variable.SetValue("@nsuccess", nsuccess); Variable.SetValue("@nerrors", nerrors);
+                   }
+                   else {
+                     Write(' < h1 align = "center" > No Instances found
+                       for this Automation < /h1>');
+                     }
+                   } else {
+                     Write(' < h1 align = "center" > Select an automation from left < /h1>');
+                     }
+      </script>
+   </div>
+   <!-- SSJS writes number of automation success and failures to DOM(not displayed to user) so Client side JS can read the same for Charting -->
+   <div style="display: none">
+      <p id="nsuccess">%%=v(@nsuccess)=%%</p>
+      <p id="nerrors">%%=v(@nerrors)=%%</p>
+   </div>
 </div>
 <!-- Code for Charting -->
 <script>
-    var data = [];
-    data[data.length] = document.getElementById("nsuccess").innerHTML;
-    data[data.length] = document.getElementById("nerrors").innerHTML;
-    new Chart(document.getElementById("pie-chart"), {
-      type: 'pie',
-      data: {
-        labels: ["Completed", "Errored"],
-        datasets: [{
-          backgroundColor: ["#82CD47", "#FB3569"],
-          data: data
-        }]
-      },
-      options: {
-        title: {
-          display: false,
-          text: 'Chart JS Pie Chart Example'
-        }
-      }
-    });
-
-    function addRowHandlers() {
-      var table = document.getElementById("tableId");
-      var rows = table.getElementsByTagName("tr");
-      for (i = 0; i < rows.length; i++) {
-        var currentRow = table.rows[i];
-        var createClickHandler = function(row) {
-          return function() {
-            var cell = row.getElementsByTagName("td")[1];
-            var ai = cell.innerHTML;
-            console.log(ai);
-            var url = 'https://cloud.e.llflooring.com/Automation%20Dashboard?ai=' + ai;
-            window.location.href = url;
-          };
-        };
-        currentRow.onclick = createClickHandler(currentRow);
-      }
-    }
-    window.onload = addRowHandlers();
+   var data = [];
+   data[data.length] = document.getElementById("nsuccess").innerHTML;
+   data[data.length] = document.getElementById("nerrors").innerHTML;
+   new Chart(document.getElementById("pie-chart"), {
+     type: 'pie',
+     data: {
+       labels: ["Completed", "Errored"],
+       datasets: [{
+         backgroundColor: ["#82CD47", "#FB3569"],
+         data: data
+       }]
+     },
+     options: {
+       title: {
+         display: false,
+         text: 'Chart JS Pie Chart Example'
+       }
+     }
+   });
+   
+   function addRowHandlers() {
+     var table = document.getElementById("tableId");
+     var rows = table.getElementsByTagName("tr");
+     for (i = 0; i < rows.length; i++) {
+       var currentRow = table.rows[i];
+       var createClickHandler = function(row) {
+         return function() {
+           var cell = row.getElementsByTagName("td")[1];
+           var ai = cell.innerHTML;
+           console.log(ai);
+           var url = 'https://cloud.e.llflooring.com/Automation%20Dashboard?ai=' + ai;
+           window.location.href = url;
+         };
+       };
+       currentRow.onclick = createClickHandler(currentRow);
+     }
+   }
+   window.onload = addRowHandlers();
 </script>
