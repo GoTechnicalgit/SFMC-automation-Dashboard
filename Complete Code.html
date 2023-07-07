@@ -1,6 +1,9 @@
 <!-- 
    Title: Automation dashboard for developers in SFMC
-   Description: This code is an automation dashboard for developers in Salesforce Marketing Cloud (SFMC). It is designed to be used on a cloud page and provides a user interface to                 display a list of automations on the left side and the instances of a selected automation on the right side, along with a pie chart showing the number of failed and                 successful runs.
+   Description: This code is an automation dashboard for developers in Salesforce Marketing Cloud (SFMC). 
+It is designed to be used on a cloud page and provides a user interface to display a list of automations
+ on the left side and the instances of a selected automation on the right side, 
+along with a pie chart showing the number of failed and  successful runs.
    Developer name: Sravan Alaparthi
    Date:
    Version:
@@ -10,7 +13,8 @@
    -->
 
 <!-- Include Required Prerequisites -->
-<!-- The code includes CSS and JavaScript libraries for styling the tables (W3.css) and charting (Chart.js). These resources can be placed within SFMC to reduce external dependencies
+<!-- The code includes CSS and JavaScript libraries for styling the tables (W3.css) and charting (Chart.js). T
+hese resources can be placed within SFMC to reduce external dependencies
 -->
 <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
@@ -27,7 +31,8 @@
 <div class="w3-cell-row w3-table-all w3-hoverable">
   <!-- Code to divide page into sections -->
    <div class=" w3-container w3-quarter">
-      <!-- The left section with 25% width of the dashboard displays a list of automations using a table. below SSJS retrieves the list of automations from SFMC using the WSProxy object. 
+      <!-- The left section with 25% width of the dashboard displays a list of automations using a table.
+           below SSJS retrieves the list of automations from SFMC using the WSProxy object. 
            The automation names  are displayed in the table rows
        -->
          <div class="w3-sidebar w3-light-grey w3-bar-block" style="width:25%">
@@ -91,8 +96,9 @@
            }
            var res = prox.retrieve("AutomationInstance", cols, filter);
      
-     /*Varibles to hold the number of sucessful runs and fails of an automation. These are caluclated in the below for loop and written to HTML as hidden attributes.
-       Thse attribute are read by client side java script and charted using chart.js
+     /*Variables to hold the number of successful runs and fails of an automation. 
+     These are calculated in the below for loop and written to HTML as hidden attributes.
+       These attribute are read by client side java script and charted using chart.js
      */
        
                   var nerrors=0;
@@ -127,7 +133,8 @@
       </script>
    </div>
   
-<!-- SSJS writes number of automation success and failures to DOM(not displayed to user) so Client side JS can read the same for Charting -->
+<!-- SSJS writes number of automation success and failures to DOM(not displayed to user) 
+so Client side JS can read the same for Charting -->
  <div style="display:none;">
   <p id="nsuccess">%%=v(@nsuccess)=%%</p>
   <p id="nerrors">%%=v(@nerrors)=%%</p>
