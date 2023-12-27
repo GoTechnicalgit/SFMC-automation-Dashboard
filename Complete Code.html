@@ -1,195 +1,318 @@
 <!-- 
-   Title: Automation dashboard for developers in SFMC
-   Description: This code is an automation dashboard for developers in Salesforce Marketing Cloud (SFMC). 
+Title: Automation dashboard for developers in SFMC
+Description: This code is an automation dashboard for developers in Salesforce Marketing Cloud (SFMC). 
 It is designed to be used on a cloud page and provides a user interface to display a list of automations
- on the left side and the instances of a selected automation on the right side, 
-along with a pie chart showing the number of failed and  successful runs.
-   Developer name: Sravan Alaparthi
-   Date:
-   Version:
-   Last modified:
-   Last modified reason:
-   
-   -->
+on the left side and the instances of a selected automation on the right side, 
+along with a pie chart showing the number of failed and successful runs.
+Developer name: Sravan Alaparthi
+Date:
+Version:
+Last modified:
+Last modified reason:
+-->
 
 <!-- Include Required Prerequisites -->
-<!-- The code includes CSS and JavaScript libraries for styling the tables (W3.css) and charting (Chart.js). T
-hese resources can be placed within SFMC to reduce external dependencies
+
+<!-- The code includes CSS and JavaScript libraries for styling the tables (W3.css) and charting (Chart.js). 
+These resources can be placed within SFMC to reduce external dependencies
 -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  /* Set the table width to 100% */
+  .custom-table {
+    width: 100%;
+    border-collapse: collapse;
+    /* Remove spacing between table cells */
+  }
+  /* Set the first column width to 25% */
+  .custom-table th, .custom-table td {
+    width: 25%;
+    border: 1px solid #000;
+    /* Optional: Add borders for visual clarity */
+    padding: 8px;
+    text-align: center;
+  }
+  /* Set the second column width to 75% */
+  .custom-table td:nth-child(2) {
+    width: 75%;
+  }
+  .sortable-header {
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .sortable-header:hover {
+    color: blue;
+    /* Change color on hover */
+  }
+  /* Create two unequal columns that float next to each other */
+  * {
+    box-sizing: border-box;
+  }
+  #myInput {
+    background-image: url('/css/searchicon.png');
+    background-position: 10px 10px;
+    background-repeat: no-repeat;
+    width: 100%;
+    font-size: 16px;
+    padding: 12px 20px 12px 40px;
+    border: 1px solid #ddd;
+    margin-bottom: 12px;
+  }
+</style>
 <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
 
-
-<!-- AMPScript to fetch selected automation ID from URL parameter -->
- %%[
-    /*Declare Variables*/
-    var @nsuccess,@nerrors,@ai
-    /*Get Subscriber in content from url*/
+<!-- AMPScript to fetch the selected automation ID from the URL parameter -->
+%%[
+    /* Declare Variables */
+    var @nsuccess, @nerrors, @ai
+    /* Get Subscriber in content from URL */
     Set @ai = RequestParameter("ai")
 ]%%
-<!-- Div to set table styles -->
-<div class="w3-cell-row w3-table-all w3-hoverable">
-  <!-- Code to divide page into sections -->
-   <div class=" w3-container w3-quarter">
-      <!-- The left section with 25% width of the dashboard displays a list of automations using a table.
-           below SSJS retrieves the list of automations from SFMC using the WSProxy object. 
-           The automation names  are displayed in the table rows
-       -->
-         <div class="w3-sidebar w3-light-grey w3-bar-block" style="width:25%">
-            <script runat="server">
-               Platform.Load("Core","1.1.1");
-                 var prox = new Script.Util.WSProxy();
-                 var cols = ["Name","CustomerKey"];
-                 var filter = {
-                     Property: "Status",
-                     SimpleOperator: "IN",
-                     Value: [-1,0,1,2,3,4,5,6,7,8]
-                 };
-                 var res = prox.retrieve("Automation", cols, filter);
-                 if (res.Results.length > 0) {  
-                  var statusObj = {
-                 "-1":"Error",
-                 "0":"BuildingError",
-                 "1":"Building",
-                 "2":"Ready",
-                 "3":"Running",
-                 "4":"Paused",
-                 "5":"Stopped",
-                 "6":"Scheduled",
-                 "7":"Awaiting Trigger",
-                 "8":"InactiveTrigger"
-               }
-                     
-                     Write('<table  id="tableId" ><tr><th colspan="2">Select the automation</th></tr>')
-                     for (var i = 0; i < res.Results.length; i++) {
-                         var autoName = res.Results[i].Name;
-                         var ID = res.Results[i].CustomerKey;
-                         var autoStatus = statusObj[autoStatusNum];
-                         
-                         Write('<tr  ><td>' + autoName + '</td><td  style="display:none;">' +ID+'</td></tr>')
-                     }
-                     Write('</table>')
-                 }
-               
-            </script>
-      </div>
-   </div>
-    <!-- The right section of the dashboard displays the instances of the selected automation.
-         It uses a table to show the instance details such as name, start time, completion time, status, and status message. 
-         -->
-   <div class="w3-container w3-threequarter">
-      <!-- Charting canavas -->
-<canvas id="pie-chart" width="150;" height="50"></canvas>
-     
-     <!--  below code retrieves the instances based on the selected automation ID and populates the table rows accordingly -->
-      <script runat="server">
-         Platform.Load("Core","1.1.1");
-         
-           var prox = new Script.Util.WSProxy();
-         var automationkey= Variable.GetValue("@ai");
-           var cols = ["Name","Status","CompletedTime","StatusMessage","StartTime"];
-   if(automationkey !== null && automationkey !==""){
-           var filter = {
-               Property: "CustomerKey",
-               SimpleOperator: "EQUALS",
-               Value: automationkey
-           }
-           var res = prox.retrieve("AutomationInstance", cols, filter);
-     
-     /*Variables to hold the number of successful runs and fails of an automation. 
-     These are calculated in the below for loop and written to HTML as hidden attributes.
-       These attribute are read by client side java script and charted using chart.js
-     */
-       
-                  var nerrors=0;
-                  var nsuccess=0;
-    
-              if(res.Results.length>1 ){
-                Write('<table  ><tr><th colspan="2"></th></tr>')
-               for (var i = 0; i < res.Results.length; i++) {
-                   var autoName = res.Results[i].Name;
-                   var StartTime = res.Results[i].StartTime;
-                  var CompletedTime = res.Results[i].CompletedTime;
-                  var Status = res.Results[i].Status;
-                   var StatusMessage = res.Results[i].StatusMessage;
-                  if(StatusMessage=='Error') {
-          nerrors = nerrors+1;
-        }
-                   if(StatusMessage=='Complete') {
-          nsuccess = nsuccess+1;
-        }
-                    Write('<tr><td>' + autoName + '</td><td>' +StartTime+ '</td><td>' +CompletedTime+ '</td><td>'+StatusMessage+'</td></tr>');
-               }
-               Write('</table>')
-              
-             Variable.SetValue("@nsuccess",nsuccess);
-        Variable.SetValue("@nerrors",nerrors);
-                }else{
-                Write('<h1 align="center">No Instances found for this Automation</h1>');
-                }
-                }else{
-        Write('<h1 align="center">Select an automation from left</h1>');
-      }
-      </script>
-   </div>
-  
-<!-- SSJS writes number of automation success and failures to DOM(not displayed to user) 
-so Client side JS can read the same for Charting -->
- <div style="display:none;">
-  <p id="nsuccess">%%=v(@nsuccess)=%%</p>
-  <p id="nerrors">%%=v(@nerrors)=%%</p>
- </div>
 
+<!-- Div to set table styles -->
+<div class="row w3-cell-row w3-table-all w3-hoverable">
+  <table class="custom-table">
+    <tr>
+      <td>
+        <!-- Code to divide the page into sections -->
+        <!-- The left section with 25% width of the dashboard displays a list of automations using a table.
+        Below SSJS retrieves the list of automations from SFMC using the WSProxy object. 
+        The automation names are displayed in the table rows
+        -->
+        <div class="w3-light-grey w3-bar-block">
+          <input type="text" id="myInput" onkeyup="filterAutomations()" placeholder="Search for an automation.." title="Type in a name">
+          <script runat="server">
+            Platform.Load("Core", "1.1.1");
+            var prox = new Script.Util.WSProxy();
+            var cols = ["Name", "CustomerKey"];
+            var filter = {
+              Property: "Status",
+              SimpleOperator: "IN",
+              Value: [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]
+            };
+            var res = prox.retrieve("Automation", cols, filter);
+            if (res.Results.length > 0) {
+              var statusObj = {
+                "-1": "Error",
+                "0": "BuildingError",
+                "1": "Building",
+                "2": "Ready",
+                "3": "Running",
+                "4": "Paused",
+                "5": "Stopped",
+                "6": "Scheduled",
+                "7": "Awaiting Trigger",
+                "8": "InactiveTrigger"
+              };
+              Write('<table id="atable" class="w3-table w3-bordered w3-striped"><tr><th colspan="2">Select the automation</th></tr>')
+              for (var i = 0; i < res.Results.length; i++) {
+                var autoName = res.Results[i].Name;
+                var ID = res.Results[i].CustomerKey;
+                var autoStatusNum = res.Results[i].Status;
+                var autoStatus = statusObj[autoStatusNum];
+                Write('<tr><td>' + autoName + '</td><td style="display:none;">' + ID + '</td></tr>')
+              }
+              Write('</table>')
+            }
+          </script>
+        </div>
+        <!-- The right section of the dashboard displays the instances of the selected automation.
+        It uses a table to show the instance details such as name, start time, completion time, status, and status message. 
+        -->
+      </td>
+      <td>
+        <div>
+          <!-- Charting canvas -->
+          <canvas id="pie-chart" width="150" height="50"></canvas>
+          <!-- below code retrieves the instances based on the selected automation ID and populates the table rows accordingly -->
+          <div class="w3-light-grey w3-bar-block">
+            <script runat="server">
+              Platform.Load("Core", "1.1.1");
+              var prox = new Script.Util.WSProxy();
+              var automationkey = Variable.GetValue("@ai");
+              var cols = ["Name", "Status", "CompletedTime", "StatusMessage", "StartTime"];
+              if (automationkey !== null && automationkey !== "") {
+                var filter = {
+                  Property: "CustomerKey",
+                  SimpleOperator: "EQUALS",
+                  Value: automationkey
+                }
+                var res = prox.retrieve("AutomationInstance", cols, filter);
+                /* Variables to hold the number of successful runs and fails of an automation. 
+                These are calculated in the below for loop and written to HTML as hidden attributes.
+                These attributes are read by client-side JavaScript and charted using Chart.js
+                */
+                var nerrors = 0;
+                var nsuccess = 0;
+                if (res.Results.length > 1) {
+                  Write('<table id="aitable" class="w3-table w3-bordered w3-striped">');
+                  Write('<tr>');
+                  Write('<th onclick="sortTable(0)" class="sortable-header">Automation Name &#x21C5;</th>');
+                  Write('<th onclick="sortTable(1)" class="sortable-header">Start Time &#x21C5;</th>');
+                  Write('<th onclick="sortTable(2)" class="sortable-header">Completed Time &#x21C5;</th>');
+                  Write('<th onclick="sortTable(3)" class="sortable-header">Status Message &#x21C5;</th>');
+                  Write('</tr>');
+                  for (var i = 0; i < res.Results.length; i++) {
+                    var autoName = res.Results[i].Name;
+                    var StartTime = res.Results[i].StartTime;
+                    var CompletedTime = res.Results[i].CompletedTime;
+                    var Status = res.Results[i].Status;
+                    var StatusMessage = res.Results[i].StatusMessage;
+                    if (StatusMessage == 'Error') {
+                      nerrors = nerrors + 1;
+                    }
+                    if (StatusMessage == 'Complete') {
+                      nsuccess = nsuccess + 1;
+                    }
+                    Write('<tr><td>' + autoName + '</td><td>' + StartTime + '</td><td>' + CompletedTime + '</td><td>' + StatusMessage + '</td></tr>');
+                  }
+                  Write('</table>')
+                  Variable.SetValue("@nsuccess", nsuccess);
+                  Variable.SetValue("@nerrors", nerrors);
+                }
+                else {
+                  Write('<h1 align="center">No Instances found for this Automation</h1>');
+                }
+              }
+              else {
+                Write('<h1 align="center">Select an automation from the left</h1>');
+              }
+            </script>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- SSJS writes the number of automation success and failures to the DOM (not displayed to the user) 
+  so Client-side JS can read the same for Charting -->
+  <div style="display:none;">
+    <p id="nsuccess">%%=v(@nsuccess)=%%</p>
+    <p id="nerrors">%%=v(@nerrors)=%%</p>
+  </div>
 </div>
 
 <!-- The JavaScript code for charting retrieves the values of the counters from the DOM and uses Chart.js to create a pie chart. 
 The chart represents the number of completed and errored instances using different colors
 -->
- <script>
-   var data=[];
+<script>
+  var data = [];
   data[data.length] = document.getElementById("nsuccess").innerHTML;
   data[data.length] = document.getElementById("nerrors").innerHTML;
-        new Chart(document.getElementById("pie-chart"), {
-         type : 'pie',
-         data : {
-          labels : [ "Completed", "Errored" ],
-          datasets : [ {
-           backgroundColor : ["#82CD47", "#FB3569" ],
-           data :data
-          } ]
-         },
-         options : {
-          title : {
-           display : false,
-           text : 'Chart JS Pie Chart Example'
-          }
-         }
-        });
-   
-   /*
-   The code includes a function addRowHandlers() that adds click handlers to the rows of the automation list table.
-   When a row is clicked, the function retrieves the automation ID from the second cell of the row and appends this to the a URL.
-   The page then refreshes to the new URL, displaying automation instances section for the automation
-   */
-   function addRowHandlers() {
-    var table = document.getElementById("tableId");
+  new Chart(document.getElementById("pie-chart"), {
+    type: 'pie',
+    data: {
+      labels: ["Completed", "Errored"],
+      datasets: [{
+        backgroundColor: ["#82CD47", "#FB3569"],
+        data: data
+      }]
+    },
+    options: {
+      title: {
+        display: false,
+        text: 'Chart JS Pie Chart Example'
+      }
+    }
+  });
+  /*
+  The code includes a function addRowHandlers() that adds click handlers to the rows of the automation list table.
+  When a row is clicked, the function retrieves the automation ID from the second cell of the row and appends this to the a URL.
+  The page then refreshes to the new URL, displaying automation instances section for the automation
+  */
+  function addRowHandlers() {
+    var table = document.getElementById("atable");
     var rows = table.getElementsByTagName("tr");
     for (i = 0; i < rows.length; i++) {
-        var currentRow = table.rows[i];
-        var createClickHandler = 
-            function(row) 
-            {
-                return function() { 
-                                        var cell = row.getElementsByTagName("td")[1];
-                                        var ai = cell.innerHTML;
-                                        console.log(ai);
-                  var url='https://cloud.e.llflooring.com/Automation%20Dashboard?ai='+ai;
-                  window.location.href = url;
-                                 };
-            };
-
-        currentRow.onclick = createClickHandler(currentRow);
+      var currentRow = table.rows[i];
+      var createClickHandler = function (row) {
+        return function () {
+          var cell = row.getElementsByTagName("td")[1];
+          var ai = cell.innerHTML;
+          console.log(ai);
+          var url = 'https://yoursfmcsubdomain.com/Automation%20Dashboard?ai=' + ai;
+          window.location.href = url;
+        };
+      };
+      currentRow.onclick = createClickHandler(currentRow);
     }
-}
-window.onload = addRowHandlers();
- </script>
+  }
+  window.onload = addRowHandlers();
+  function sortTable(n) {
+    var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+    table = document.getElementById("aitable");
+    // Change to match your actual table ID
+    switching = true;
+    // Set the sorting direction to ascending:
+    dir = "asc";
+    /* Make a loop that will continue until
+  no switching has been done: */
+    while (switching) {
+      // Start by saying: no switching is done:
+      switching = false;
+      rows = table.rows;
+      /* Loop through all table rows (except the
+    first, which contains table headers): */
+      for (i = 1; i < (rows.length - 1); i++) {
+        // Start by saying there should be no switching:
+        shouldSwitch = false;
+        /* Get the two elements you want to compare,
+      one from the current row and one from the next: */
+        x = rows[i].getElementsByTagName("TD")[n];
+        y = rows[i + 1].getElementsByTagName("TD")[n];
+        /* Check if the two rows should switch place,
+      based on the direction, asc or desc: */
+        if (dir == "asc") {
+          if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+            // If so, mark as a switch and break the loop:
+            shouldSwitch = true;
+            break;
+          }
+        }
+        else if (dir == "desc") {
+          if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+            // If so, mark as a switch and break the loop:
+            shouldSwitch = true;
+            break;
+          }
+        }
+      }
+      if (shouldSwitch) {
+        /* If a switch has been marked, make the switch
+      and mark that a switch has been done: */
+        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+        switching = true;
+        // Each time a switch is done, increase this count by 1:
+        switchcount++;
+      }
+      else {
+        /* If no switching has been done AND the direction is "asc",
+      set the direction to "desc" and run the while loop again. */
+        if (switchcount == 0 && dir == "asc") {
+          dir = "desc";
+          switching = true;
+        }
+      }
+    }
+  }
+  function filterAutomations() {
+    var input, filter, table, tr, td, i, txtValue;
+    input = document.getElementById("myInput");
+    filter = input.value.toUpperCase();
+    table = document.getElementById("atable");
+    tr = table.getElementsByTagName("tr");
+    for (i = 0; i < tr.length; i++) {
+      td = tr[i].getElementsByTagName("td")[0];
+      if (td) {
+        txtValue = td.textContent || td.innerText;
+        if (txtValue.toUpperCase().indexOf(filter) > -1) {
+          tr[i].style.display = "";
+        } else {
+          tr[i].style.display = "none";
+        }
+      }       
+    }
+  }
+</script>
