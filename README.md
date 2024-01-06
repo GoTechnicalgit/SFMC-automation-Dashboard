@@ -5,6 +5,6 @@ This got a pie chart showing the number of failed and successful runs.
 
 Complete details can be found at the below link:
 
-[https://www.salaparthi.com/2023/07/monitoring-sfmc-automation-developing.html](url)
+https://www.salaparthi.com/2023/07/monitoring-sfmc-automation-developing.html
 
 .
